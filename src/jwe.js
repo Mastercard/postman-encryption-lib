@@ -1,5 +1,6 @@
 const jose = require('node-jose');
 const { validateEnv } = require('./util');
+const { EncryptionUtils } = require('mastercard-client-encryption');
 
 function jweEncryption(pm) {
   validateEnv(['pathToRawData', 'pathToEncryptedData', 'publicKeyFingerprint', 'encryptionCert'], pm.environment);
@@ -8,34 +9,14 @@ function jweEncryption(pm) {
     const reqBody = JSON.parse(pm.request.body.raw);
     const pathToRawData = pm.environment.get('pathToRawData');
     const pathToEncryptedData = pm.environment.get('pathToEncryptedData');
-    const encryptedProperty = pm.environment.get('encryptedProperty') ?? 'encryptedData';
+    const encryptedValueFieldName = pm.environment.get('encryptedValueFieldName') ?? 'encryptedData';
     const publicKeyFingerprint = pm.environment.get('publicKeyFingerprint');
     const encryptionCertificate = pm.environment.get('encryptionCert');
 
-    // Get element in payload to encrypt
-    let tmpIn = reqBody;
-    let prevIn = null;
-
-    const paths = pathToRawData.split('.');
-    paths.forEach((e) => {
-      if (pathToRawData !== '$' && !Object.prototype.hasOwnProperty.call(tmpIn, e)) {
-        tmpIn[e] = {};
-      }
-      prevIn = tmpIn;
-      tmpIn = tmpIn[e];
-    });
-    const elem = pathToRawData.split('.').pop();
-    const target = pathToRawData !== '$' ? prevIn[elem] : reqBody;
-
-    // Get output path of encrypted payload
-    let outPath = reqBody;
-    const pathsOut = pathToEncryptedData.split('.');
-    pathsOut.forEach((e) => {
-      if (pathToEncryptedData !== '$' && !Object.prototype.hasOwnProperty.call(outPath, e)) {
-        outPath[e] = {};
-      }
-      outPath = outPath[e];
-    });
+    const encryptionTarget = EncryptionUtils.elemFromPath(pathToRawData, reqBody);
+    if (!encryptionTarget || !encryptionTarget.node) {
+      return resolve(reqBody);
+    }
 
     const keystore = jose.JWK.createKeyStore();
     return (
@@ -44,7 +25,7 @@ function jweEncryption(pm) {
 
         // Encrypt payload and attach to request body
         .then((publicKey) => {
-          const buffer = Buffer.from(JSON.stringify(target));
+          const buffer = Buffer.from(JSON.stringify(encryptionTarget.node));
           return jose.JWE.createEncrypt(
             {
               format: 'compact',
@@ -57,20 +38,14 @@ function jweEncryption(pm) {
             .final();
         })
         .then((encrypted) => {
-          if (pathToEncryptedData !== '$') {
-            outPath[encryptedProperty] = encrypted;
-          } else {
-            if (pathToRawData === '$') {
-              const properties = Object.keys(reqBody);
-              properties.forEach((e) => {
-                delete reqBody[e];
-              });
-            }
-            reqBody[encryptedProperty] = encrypted;
-          }
-          delete prevIn[elem];
-
-          resolve(reqBody);
+          // mirror what the mastercard encryption lib does
+          const encryptedReqBody = EncryptionUtils.addEncryptedDataToBody(
+            { [encryptedValueFieldName]: encrypted },
+            { element: pathToRawData, obj: pathToEncryptedData },
+            encryptedValueFieldName,
+            reqBody,
+          );
+          resolve(encryptedReqBody);
         })
     );
   });
