@@ -74,20 +74,23 @@ describe(`Tests for ${jweEncryption.name}()`, () => {
 
     pm.environment.set('pathToRawData', 'path.to.foo');
     pm.environment.set('pathToEncryptedData', 'path.to.encryptedFoo');
+    pm.environment.set('encryptedValueFieldName', 'theEncryptedRequest');
 
     const expectedBodyFormat = {
       irrelevantProperty: 'this should be preserved',
       path: {
         to: {
-          encryptedFoo: 'the encrypted request body',
+          encryptedFoo: {
+            theEncryptedRequest: 'the encrypted request body',
+          },
         },
       },
     };
 
     const actualEncryptedBody = await jweEncryption(pm);
 
-    expect(actualEncryptedBody.path.to.encryptedFoo).not.toBe(undefined);
-    expect(actualEncryptedBody.path.to.encryptedFoo).not.toBe(null);
+    expect(actualEncryptedBody.path.to.encryptedFoo.theEncryptedRequest).not.toBe(undefined);
+    expect(actualEncryptedBody.path.to.encryptedFoo.theEncryptedRequest).not.toBe(null);
     expect(Object.keys(actualEncryptedBody).sort()).toEqual(Object.keys(expectedBodyFormat).sort());
   });
 });

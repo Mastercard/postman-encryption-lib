@@ -16,6 +16,7 @@ function mastercardEncryption(pm) {
   );
   const encryptionPathIn = pm.environment.get('pathToRawData');
   const encryptionPathOut = pm.environment.get('pathToEncryptedData');
+  const encryptedValueFieldName = pm.environment.get('encryptedValueFieldName') ?? 'encryptedData';
   const ivFieldName = pm.environment.get('ivFieldName');
   const dataEncoding = pm.environment.get('dataEncoding');
   const encryptionCertificate = pm.environment.get('encryptionCert');
@@ -47,7 +48,7 @@ function mastercardEncryption(pm) {
     ],
     ivFieldName,
     encryptedKeyFieldName: 'encryptedKey',
-    encryptedValueFieldName: 'encryptedData',
+    encryptedValueFieldName,
     dataEncoding,
     encryptionCertificate,
     oaepPaddingDigestAlgorithm: 'SHA-256',

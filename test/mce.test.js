@@ -60,11 +60,12 @@ describe(`Tests for ${mastercardEncryption.name}()`, () => {
 
     pm.environment.set('pathToRawData', 'path.to.foo');
     pm.environment.set('pathToEncryptedData', 'path.to.encryptedFoo');
+    pm.environment.set('encryptedValueFieldName', 'theEncryptedRequest');
 
     const mockUpdateFn = jest.fn();
     pm.request.body.update = mockUpdateFn;
     const expectedBodyFormat = {
-      encryptedData: 'the encrypted request body',
+      theEncryptedRequest: 'the encrypted request body',
       iv: 'iv',
       encryptedKey: 'encrypted key',
       publicKeyFingerprint: 'public key fingerprint',
