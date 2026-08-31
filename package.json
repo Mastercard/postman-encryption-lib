@@ -43,6 +43,9 @@
     "prettier": "^3.0.3",
     "uglify-js": "^3.17.4"
   },
+  "overrides": {
+    "lodash-es": "4.17.23"
+  },
   "config": {
     "commitizen": {
       "path": "./node_modules/cz-conventional-changelog"
